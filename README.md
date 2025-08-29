@@ -290,7 +290,7 @@ Kami menyambut kontribusi dari developer lain untuk meningkatkan kualitas aplika
 - **GitHub**: [https://github.com/AzlNach](https://github.com/AzlNach)
 - **LinkedIn**: [https://www.linkedin.com/in/azlnach-si26](https://www.linkedin.com/in/azlnach-si26)
 - **Issues**: GitHub Issues section
-- **Project Repository**: [https://github.com/AzlNach/anamnesa](https://github.com/AzlNach/anamnesa)
+- **Project Repository**: [https://github.com/AzlNach/anamnesa](https://github.com/AzlNach/Anamnesa)
 
 ## 📄 Lisensi
 
