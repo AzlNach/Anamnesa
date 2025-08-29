@@ -1,103 +1,164 @@
-import Image from "next/image";
+'use client'
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Heart, Shield, AlertTriangle, ArrowRight } from "lucide-react";
+import DeveloperFooter from "./components/DeveloperFooter";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [complaint, setComplaint] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleStartAnalysis = async () => {
+    if (!complaint.trim()) {
+      alert("Silakan masukkan keluhan Anda terlebih dahulu");
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ complaint }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Store initial analysis in localStorage for next steps
+        localStorage.setItem('initialAnalysis', JSON.stringify(data));
+        localStorage.setItem('originalComplaint', complaint);
+        router.push('/consultation');
+      } else {
+        throw new Error('Gagal memulai analisis');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="max-w-4xl w-full">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex justify-center items-center mb-6">
+            <h1 className="text-4xl font-bold text-gray-800">
+              Anamnesa AI
+            </h1>
+          </div>
+          <p className="text-xl text-gray-600 mb-4">
+            Asisten Konsultasi Kesehatan Berbasis AI
+          </p>
+          <p className="text-gray-500 max-w-2xl mx-auto">
+            Dapatkan analisis awal kondisi kesehatan Anda melalui konsultasi interaktif 
+            dengan teknologi AI Google Gemini. Hasil konsultasi dapat membantu Anda 
+            mempersiapkan kunjungan ke dokter.
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Main Form */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <div className="mb-6">
+            <label htmlFor="complaint" className="block text-lg font-semibold text-gray-700 mb-3">
+              Ceritakan keluhan atau gejala yang Anda rasakan
+            </label>
+            <textarea
+              id="complaint"
+              value={complaint}
+              onChange={(e) => setComplaint(e.target.value)}
+              placeholder="Ketikkan keluhan utama Anda di sini, misalnya: 'Saya sering merasa sakit kepala di bagian belakang selama seminggu terakhir disertai mual dan pusing saat bangun tidur...'"
+              className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none text-gray-700"
+              disabled={isLoading}
+            />
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm text-gray-500">
+                {complaint.length}/500 karakter
+              </span>
+              <span className="text-sm text-gray-400">
+                Deskripsikan dengan detail untuk analisis yang lebih akurat
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleStartAnalysis}
+            disabled={isLoading || !complaint.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                Menganalisis...
+              </>
+            ) : (
+              <>
+                Mulai Analisis
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+          <div className="flex items-start">
+            <AlertTriangle className="w-6 h-6 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                Penting untuk Diingat
+              </h3>
+              <ul className="text-yellow-700 space-y-1">
+                <li>• Aplikasi ini <strong>BUKAN pengganti konsultasi medis profesional</strong></li>
+                <li>• Hasil analisis hanya sebagai <strong>panduan awal</strong> sebelum berkonsultasi dengan dokter</li>
+                <li>• Dalam situasi darurat medis, segera hubungi layanan kesehatan terdekat</li>
+                <li>• Selalu konsultasikan kondisi kesehatan Anda dengan tenaga medis profesional</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="grid md:grid-cols-3 gap-6 mt-12">
+          <div className="text-center p-6">
+            <div className="bg-green-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Shield className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-2">Analisis AI Terpercaya</h3>
+            <p className="text-gray-600 text-sm">
+              Powered by Google Gemini untuk analisis gejala yang akurat
+            </p>
+          </div>
+          <div className="text-center p-6">
+            <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Heart className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-2">Konsultasi Interaktif</h3>
+            <p className="text-gray-600 text-sm">
+              Proses tanya jawab mendalam untuk diagnosis yang lebih tepat
+            </p>
+          </div>
+          <div className="text-center p-6">
+            <div className="bg-purple-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <ArrowRight className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-2">Panduan Tindakan</h3>
+            <p className="text-gray-600 text-sm">
+              Rekomendasi langkah selanjutnya berdasarkan hasil analisis
+            </p>
+          </div>
+        </div>
+        </div>
+      </div>
+      <DeveloperFooter />
     </div>
   );
 }
