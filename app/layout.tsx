@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Anamnesa AI - Asisten Konsultasi Kesehatan",
-  description: "Aplikasi AI untuk konsultasi kesehatan awal dan analisis gejala dengan teknologi Google Gemini",
+  title: "Anamnesa AI - Asisten Konsultasi Kesehatan & Analisis Gambar Medis",
+  description: "Aplikasi AI untuk konsultasi kesehatan awal, analisis gejala, dan segmentasi gambar medis dengan teknologi Google Gemini. Dilengkapi Chain of Thought prompting untuk analisis mendalam.",
+  keywords: "konsultasi kesehatan, AI medis, analisis gambar medis, segmentasi gambar, diagnosa AI, anamnesis, Google Gemini, kesehatan digital",
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
