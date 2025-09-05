@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Shield, AlertTriangle, ArrowRight } from "lucide-react";
+import { Heart, Shield, AlertTriangle, ArrowRight, Camera, Stethoscope, Archive, Focus } from "lucide-react";
 import DeveloperFooter from "./components/DeveloperFooter";
+import Link from "next/link";
 
 export default function Home() {
   const [complaint, setComplaint] = useState("");
@@ -63,49 +64,94 @@ export default function Home() {
             dengan teknologi AI Google Gemini. Hasil konsultasi dapat membantu Anda 
             mempersiapkan kunjungan ke dokter.
           </p>
+        {/* Navigation to Other Features */}
         </div>
-
-        {/* Main Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div className="mb-6">
-            <label htmlFor="complaint" className="block text-lg font-semibold text-gray-700 mb-3">
-              Ceritakan keluhan atau gejala yang Anda rasakan
-            </label>
-            <textarea
-              id="complaint"
-              value={complaint}
-              onChange={(e) => setComplaint(e.target.value)}
-              placeholder="Ketikkan keluhan utama Anda di sini, misalnya: 'Saya sering merasa sakit kepala di bagian belakang selama seminggu terakhir disertai mual dan pusing saat bangun tidur...'"
-              className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none text-gray-700"
-              disabled={isLoading}
-            />
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm text-gray-500">
-                {complaint.length}/500 karakter
-              </span>
-              <span className="text-sm text-gray-400">
-                Deskripsikan dengan detail untuk analisis yang lebih akurat
-              </span>
-            </div>
+                <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Fitur Lainnya
+          </h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Link 
+              href="/image-analysis"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            >
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Focus className="text-green-600" size={20} />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Analisis Gambar Medis</h4>
+                <p className="text-sm text-gray-600">Segmentasi dan analisis gambar dengan AI</p>
+              </div>
+            </Link>
+            
+            <Link 
+              href="/results"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            >
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Archive className="text-purple-600" size={20} />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900">Riwayat Analisis</h4>
+                <p className="text-sm text-gray-600">Lihat hasil analisis sebelumnya</p>
+              </div>
+            </Link>
           </div>
+        </div>
+        {/* Service Options */}
+        <div className="mb-8">
+          {/* Text-based Consultation */}
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Stethoscope className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Konsultasi Anamnesis</h2>
+                <p className="text-gray-600">Analisis gejala dengan pertanyaan terarah</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="complaint" className="block text-lg font-semibold text-gray-700 mb-3">
+                Ceritakan keluhan atau gejala yang Anda rasakan
+              </label>
+              <textarea
+                id="complaint"
+                value={complaint}
+                onChange={(e) => setComplaint(e.target.value)}
+                placeholder="Ketikkan keluhan utama Anda di sini, misalnya: 'Saya sering merasa sakit kepala di bagian belakang selama seminggu terakhir disertai mual dan pusing saat bangun tidur...'"
+                className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none text-gray-700"
+                disabled={isLoading}
+              />
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-sm text-gray-500">
+                  {complaint.length}/500 karakter
+                </span>
+                <span className="text-sm text-gray-400">
+                  Deskripsikan dengan detail untuk analisis yang lebih akurat
+                </span>
+              </div>
+            </div>
 
-          <button
-            onClick={handleStartAnalysis}
-            disabled={isLoading || !complaint.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                Menganalisis...
-              </>
-            ) : (
-              <>
-                Mulai Analisis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </>
-            )}
-          </button>
+            <button
+              onClick={handleStartAnalysis}
+              disabled={isLoading || !complaint.trim()}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  Menganalisis...
+                </>
+              ) : (
+                <>
+                  Mulai Analisis
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Disclaimer */}
@@ -127,7 +173,7 @@ export default function Home() {
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-12">
+        <div className="grid md:grid-cols-4 gap-6 mt-12">
           <div className="text-center p-6">
             <div className="bg-green-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <Shield className="w-8 h-8 text-green-600" />
@@ -148,7 +194,16 @@ export default function Home() {
           </div>
           <div className="text-center p-6">
             <div className="bg-purple-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <ArrowRight className="w-8 h-8 text-purple-600" />
+              <Camera className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-2">Analisis Gambar</h3>
+            <p className="text-gray-600 text-sm">
+              Segmentasi gambar medis dengan Chain of Thought AI
+            </p>
+          </div>
+          <div className="text-center p-6">
+            <div className="bg-orange-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <ArrowRight className="w-8 h-8 text-orange-600" />
             </div>
             <h3 className="font-semibold text-gray-800 mb-2">Panduan Tindakan</h3>
             <p className="text-gray-600 text-sm">
