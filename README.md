@@ -1,7 +1,32 @@
 # Anamnesa AI - Asisten Konsultasi Kesehatan Berbasis AI
 
 **Description**  
-Anamnesa AI adalah aplikasi web statis berbasis Next.js yang berfungsi sebagai asisten diagnosis kesehatan awal berbasis chatbot. Aplikasi ini menggunakan teknologi Google Gemini AI untuk melakukan analisis gejala dan proses anamnesis (wawancara medis) interaktif dengan ekspor hasil dalam format PDF profesional berstandar A4.
+Anamnesa AI adalah aplikasi web statis berbasis Next.js yang berfungsi sebagai asist## 📁 Struktur Proyek
+
+```
+anamnesa/
+├── app/
+│   ├── api/
+│   │   ├── analyze/          # Analisis awal gejala
+│   │   ├── anamnesis/        # Pertanyaan lanjutan
+│   │   ├── final-diagnosis/  # Diagnosis final
+│   │   └── image-analysis/   # Analisis gambar medis (NEW!)
+│   ├── components/
+│   │   ├── DeveloperFooter.tsx
+│   │   ├── FloatingActionButton.tsx
+│   │   ├── ImageAnalysis.tsx # Komponen analisis gambar (NEW!)
+│   │   └── NoDataError.tsx
+│   ├── consultation/         # Halaman proses anamnesis
+│   ├── image-analysis/       # Halaman analisis gambar (NEW!)
+│   ├── results/             # Halaman hasil diagnosis
+│   ├── lib/                 # Utility functions
+│   ├── globals.css          # Global styles
+│   ├── layout.tsx          # Root layout
+│   └── page.tsx            # Homepage
+├── public/                  # Static assets
+├── .env.local.example      # Environment variables template
+└── README.md
+```tan awal berbasis chatbot. Aplikasi ini menggunakan teknologi Google Gemini AI untuk melakukan analisis gejala dan proses anamnesis (wawancara medis) interaktif dengan ekspor hasil dalam format PDF profesional berstandar A4.
 
 ---
 
@@ -16,8 +41,13 @@ Anamnesa AI adalah aplikasi web statis berbasis Next.js yang berfungsi sebagai a
 ## 🚀 Features
 - **🤖 AI-Powered Symptom Analysis**: Analisis gejala menggunakan Google Gemini AI untuk ekstraksi dan interpretasi keluhan medis secara akurat.
 - **💬 Interactive Anamnesis**: Proses tanya jawab interaktif berbasis AI dengan minimal 5-10 pertanyaan dinamis berdasarkan kompleksitas kasus.
+- **📸 Medical Image Analysis & Segmentation**: Analisis gambar medis dengan AI segmentasi menggunakan Chain of Thought prompting untuk diagnosis visual yang komprehensif.
+- **🧠 Chain of Thought Medical Analysis**: Pendekatan analisis step-by-step (6 tahap) untuk memberikan reasoning yang jelas dan diagnosis yang lebih akurat.
+- **📝 Optional Image Description**: Fitur deskripsi gambar opsional untuk meningkatkan akurasi analisis AI dengan konteks tambahan dari pasien.
 - **🎯 Intelligent Medical Diagnosis**: Sintesis komprehensif informasi untuk memberikan diagnosis yang paling mungkin dengan tingkat keyakinan.
 - **📄 Professional PDF Export**: Ekspor hasil konsultasi dalam format PDF A4 dengan desain medis profesional, margin standar, dan struktur yang rapi.
+- **💊 Comprehensive Treatment Recommendations**: Rekomendasi pengobatan detail termasuk self-care, medications, prevention, dan follow-up plan.
+- **🔒 API Cost Optimization**: One-time analysis per image untuk menghemat penggunaan API dan biaya operasional.
 - **♿ Responsive & Accessible**: Interface yang ramah pengguna dengan desain mobile-first dan aksesibilitas yang optimal.
 - **🔐 Privacy-First Approach**: Tidak menyimpan data pribadi, proses analisis dilakukan secara real-time tanpa tracking pengguna.
 - **🏥 Medical-Grade Formatting**: Hasil diagnosis dengan format standar medis termasuk disclaimer, rekomendasi tindakan, dan panduan follow-up.
@@ -32,14 +62,17 @@ Anamnesa AI adalah aplikasi web statis berbasis Next.js yang berfungsi sebagai a
 
 **Backend:**
 - Next.js API Routes
+- Google Gemini 2.0 Flash (Vision & Text)
 - Google Gemini 2.5 Flash Lite API
 - jsPDF (PDF Generation)
 - Node.js Runtime
 
 **AI & Analytics:**
-- Google Gemini AI
+- Google Gemini AI (Multimodal)
 - Natural Language Processing
 - Medical Symptom Analysis
+- Image Segmentation & Analysis
+- Chain of Thought Prompting
 
 ---
 
@@ -102,25 +135,45 @@ npm start
 - Validasi input dan disclaimer medis
 - UI yang clean dan menenangkan
 
-### 2. Analisis Awal & Ekstraksi Gejala
+### 2. Pilihan Layanan Konsultasi
+- **Text-based Consultation**: Anamnesis tradisional dengan tanya jawab
+- **Image Analysis**: Upload dan analisis gambar medis dengan AI segmentasi
+
+### 3A. Analisis Awal & Ekstraksi Gejala (Text-based)
 - Gemini AI mengekstrak gejala kunci dari input
 - Format gejala sesuai untuk API medis
 - Simulasi panggilan EndlessMedical API untuk diagnosis potensial
 
-### 3. Proses Anamnesis (5-10 Pertanyaan)
+### 3B. Medical Image Analysis (Image-based)
+- Upload gambar dengan validasi format dan ukuran
+- Deskripsi gambar opsional untuk konteks tambahan
+- Analisis Chain of Thought (6 tahap systematic):
+  1. **Observasi Awal**: Identifikasi struktur anatomi
+  2. **Segmentasi Visual**: Area normal vs abnormal
+  3. **Analisis Morfologi**: Karakteristik detail lesi
+  4. **Diagnosis Diferensial**: Multiple kemungkinan diagnosis
+  5. **Rekomendasi Tindakan**: Treatment & follow-up
+  6. **Edukasi Pasien**: Penjelasan dalam bahasa awam
+
+### 4. Proses Anamnesis (5-10 Pertanyaan) - Text-based
 - Gemini AI menghasilkan pertanyaan berdasarkan diagnosis potensial
 - Pertanyaan fokus pada: karakteristik gejala, riwayat keluarga, gaya hidup
 - Interface chatbot untuk interaksi yang natural
 
-### 4. Diagnosis Final
+### 5. Diagnosis Final
 - Analisis komprehensif semua data yang terkumpul
 - Gemini AI menentukan diagnosis paling mungkin
 - Tingkat keyakinan dan alasan logis
 
-### 5. Hasil & Rekomendasi
+### 6. Hasil & Rekomendasi
 - Tampilan hasil dalam format kartu yang mudah dibaca
 - Rekomendasi tindakan segera dan jenis dokter
 - Saran perawatan umum dan gaya hidup
+- **Comprehensive Treatment Plan** (Image Analysis):
+  - Self-care instructions
+  - Safe medications recommendations
+  - Prevention strategies
+  - Warning signs to watch
 - Opsi download hasil PDF profesional format A4
 
 ---
@@ -187,6 +240,29 @@ Request: {
 Response: { finalDiagnosis: object }
 ```
 
+### POST `/api/image-analysis` *(NEW!)*
+Analisis gambar medis dengan Chain of Thought prompting
+```typescript
+Request: FormData {
+  image: File,
+  imageDescription?: string,
+  patientData?: string
+}
+Response: {
+  success: boolean,
+  analysis: {
+    imageQuality: string,
+    anatomicalRegion: string,
+    visualObservations: object,
+    segmentationAnalysis: object,
+    differentialDiagnosis: array,
+    recommendations: object,
+    patientEducation: object,
+    disclaimer: string
+  }
+}
+```
+
 ## 🎨 Kustomisasi Tampilan
 
 ### Tema Warna
@@ -216,21 +292,30 @@ Aplikasi menggunakan tema kesehatan dengan warna dasar:
 
 ## 🔮 Roadmap & Pengembangan Selanjutnya
 
-### Phase 2 - Integrasi API Medis
+### Phase 2 - Enhanced AI Features *(COMPLETED!)*
+- [x] **Medical Image Analysis**: Implementasi analisis gambar dengan AI segmentasi
+- [x] **Chain of Thought Prompting**: Pendekatan analisis sistematis 6 tahap
+- [x] **Optional Image Description**: Konteks tambahan untuk akurasi diagnosis
+- [x] **Comprehensive Treatment Recommendations**: Rekomendasi pengobatan detail
+- [x] **API Cost Optimization**: One-time analysis untuk efisiensi biaya
+
+### Phase 3 - Integrasi API Medis
 - [ ] Integrasi real EndlessMedical API
 - [ ] Database diagnosis yang lebih comprehensive
 - [ ] Caching untuk performa yang lebih baik
 
-### Phase 3 - Fitur Lanjutan
+### Phase 4 - Fitur Lanjutan
 - [ ] Riwayat konsultasi pengguna
-- [ ] Export PDF yang lebih rich
+- [ ] Export PDF yang lebih rich dengan image analysis results
 - [ ] Notifikasi follow-up
 - [ ] Multi-language support
+- [ ] Multi-image analysis untuk kondisi kompleks
 
-### Phase 4 - AI Enhancement
+### Phase 5 - AI Enhancement
 - [ ] Fine-tuning model untuk domain medis Indonesia
 - [ ] Integrasi dengan medical knowledge base
 - [ ] Prediksi tingkat risiko
+- [ ] Real-time image quality assessment
 
 ## 🤝 Kontribusi
 
@@ -314,5 +399,30 @@ Aplikasi ini telah dilengkapi dengan:
 - ✅ Export PDF format A4 profesional
 - ✅ Responsive design untuk semua perangkat
 - ✅ Antarmuka intuitif dengan tema medis
+- ✅ **Medical Image Analysis dengan AI Segmentasi** *(NEW!)*
+- ✅ **Chain of Thought Analysis** untuk reasoning yang transparan *(NEW!)*
+- ✅ **Optional Image Description** untuk konteks tambahan *(NEW!)*
+- ✅ **Cost-Optimized API Usage** dengan one-time analysis *(NEW!)*
+
+### 🆕 Latest Features (v2.0)
+
+#### **🔬 Medical Image Analysis**
+- **AI-Powered Segmentation**: Analisis otomatis area normal vs abnormal
+- **Chain of Thought**: 6 tahap analisis sistematis untuk transparency
+- **Visual + Textual Context**: Kombinasi analisis gambar dengan deskripsi pasien
+- **Comprehensive Diagnosis**: Multiple differential diagnosis dengan probability scoring
+
+#### **💊 Enhanced Treatment Recommendations**
+- **Self-Care Instructions**: Panduan perawatan mandiri yang aman
+- **Medication Suggestions**: Rekomendasi obat bebas dengan dosis
+- **Prevention Strategies**: Langkah pencegahan berbasis evidensi
+- **Follow-up Planning**: Timeline kontrol dan specialist referral
+
+#### **🎯 User Experience Improvements**
+- **Dual Service Options**: Text consultation + Image analysis
+- **Smart Navigation**: Cross-feature navigation yang seamless
+- **Input Validation**: Real-time validation untuk semua input
+- **Error Handling**: Comprehensive error management dengan fallback
+
 
 *Terima kasih telah menggunakan Anamnesa AI! 🏥💙*
