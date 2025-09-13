@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Shield, AlertTriangle, ArrowRight, Camera, Stethoscope, Archive, Focus } from "lucide-react";
+import { Heart, Shield, AlertTriangle, ArrowRight, Camera, Stethoscope, Archive, Focus, BookOpen } from "lucide-react";
 import DeveloperFooter from "./components/DeveloperFooter";
+import RAGAssistant from "./components/RAGAssistant";
 import Link from "next/link";
 
 export default function Home() {
   const [complaint, setComplaint] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showRAGAssistant, setShowRAGAssistant] = useState(false);
   const router = useRouter();
 
   const handleStartAnalysis = async () => {
@@ -169,6 +171,44 @@ export default function Home() {
                 <li>• Selalu konsultasikan kondisi kesehatan Anda dengan tenaga medis profesional</li>
               </ul>
             </div>
+          </div>
+        </div>
+
+        {/* RAG Assistant Section */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-100 rounded-xl">
+                  <BookOpen className="w-8 h-8 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Asisten Medis RAG</h2>
+                  <p className="text-gray-600">Tanya jawab dengan basis pengetahuan medis</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRAGAssistant(!showRAGAssistant)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  showRAGAssistant 
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {showRAGAssistant ? 'Tutup' : 'Buka'}
+              </button>
+            </div>
+            
+            {showRAGAssistant && (
+              <RAGAssistant 
+                context="general"
+                onResponse={(response) => {
+                  // Optionally pre-fill complaint with RAG response if helpful
+                  console.log('RAG Response:', response);
+                }}
+                className="mt-4"
+              />
+            )}
           </div>
         </div>
 
