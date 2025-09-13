@@ -45,6 +45,10 @@ rag-system/credentials.json
 rag-system/token.json
 rag-system/data/*.json
 rag-system/data/*.db
+rag-system/data/ncbi/*.json
+rag-system/data/ncbi/*.db
+rag-system/data/logs/*.log
+rag-system/data/logs/
 rag-system/__pycache__/
 *.pyc
 *.pyo
