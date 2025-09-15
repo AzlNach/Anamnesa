@@ -9,7 +9,7 @@ import sys
 import json
 import logging
 import requests
-import fitz  # PyMuPDF for PDF processing
+import pymupdf  # PyMuPDF for PDF processing
 from pathlib import Path
 from typing import List, Dict, Set, Optional
 import time
@@ -51,7 +51,7 @@ class NCBICrawler:
                  base_url: str = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/",
                  max_workers: int = 10,
                  timeout: int = 30,
-                 max_papers_per_run: int = 100):
+                 max_papers_per_run: int = 1000):  # Increased from 100 to 1000
         
         self.base_url = base_url
         self.max_workers = max_workers
@@ -136,7 +136,7 @@ class NCBICrawler:
         if paper.success:
             self.processed_urls.add(paper.url)
     
-    def discover_pdf_urls(self, max_directories: int = 5) -> List[str]:
+    def discover_pdf_urls(self, max_directories: int = 20) -> List[str]:  # Increased from 5 to 20
         """Discover PDF URLs from NCBI FTP directory structure"""
         logger.info("Starting PDF URL discovery...")
         
@@ -163,7 +163,7 @@ class NCBICrawler:
                 
                 logger.info(f"Processing level-1 directory: {level1}/")
                 
-                for level2 in level2_dirs[:3]:  # Limit level2 for efficiency
+                for level2 in level2_dirs[:5]:  # Increased from 3 to 5 for more coverage
                     dir_url = f"{self.base_url}{level1}/{level2}/"
                     
                     try:
@@ -268,7 +268,7 @@ class NCBICrawler:
                 )
             
             # Extract text using PyMuPDF
-            pdf_document = fitz.open(stream=pdf_content, filetype="pdf")
+            pdf_document = pymupdf.open(stream=pdf_content, filetype="pdf")
             
             # Extract title from first page
             first_page = pdf_document[0]
@@ -480,10 +480,10 @@ def main():
     print("🕷️  NCBI PMC FTP Crawler")
     print("=" * 50)
     
-    # Initialize crawler with conservative settings for testing
+    # Initialize crawler with higher limits
     crawler = NCBICrawler(
-        max_workers=5,  # Conservative for testing
-        max_papers_per_run=10  # Small batch for testing
+        max_workers=8,  # Increased for better performance
+        max_papers_per_run=1000  
     )
     
     try:
