@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NCBI PMC FTP Crawler for RAG Knowledge Base
-Crawls NCBI FTP server untuk mendownload dan memproses paper medis
+NCBI PMC FTP Crawler for RAG Knowledge Base with Auto-Embedding
+Crawls NCBI FTP server untuk mendownload, memproses, dan membuat embeddings untuk paper medis
 """
 
 import os
@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass
 import sqlite3
 import hashlib
+import google.generativeai as genai
 
 # Setup logging
 logging.basicConfig(
@@ -42,21 +43,92 @@ class ProcessedPaper:
     processed_date: str
     content_length: int
     success: bool
+    embedding: Optional[List[float]] = None
     error_message: Optional[str] = None
 
+class EmbeddingGenerator:
+    """Kelas untuk menghasilkan embeddings menggunakan Gemini API"""
+    
+    def __init__(self, gemini_api_key: str):
+        """Initialize dengan Gemini API key"""
+        genai.configure(api_key=gemini_api_key)
+        self.embedding_model = "models/text-embedding-004"
+        self.logger = logging.getLogger(__name__)
+    
+    def create_text_for_embedding(self, paper_data: Dict) -> str:
+        """Buat teks untuk embedding dari paper data"""
+        text_parts = []
+        
+        # Tambahkan title
+        if paper_data.get('title'):
+            text_parts.append(f"Title: {paper_data['title']}")
+        
+        # Tambahkan content (batasi panjang untuk efisiensi)
+        if paper_data.get('content'):
+            content = paper_data['content']
+            # Batasi content ke 3000 karakter untuk embedding yang efisien
+            if len(content) > 3000:
+                content = content[:3000] + "..."
+            text_parts.append(f"Content: {content}")
+        
+        # Tambahkan source info
+        if paper_data.get('source'):
+            text_parts.append(f"Source: {paper_data['source']}")
+        
+        return " ".join(text_parts)
+    
+    def create_embedding(self, text: str) -> Optional[List[float]]:
+        """Buat embedding untuk teks menggunakan Gemini"""
+        try:
+            # Clean text untuk embedding
+            text = text.strip()
+            if not text:
+                return None
+            
+            # Buat embedding
+            result = genai.embed_content(
+                model=self.embedding_model,
+                content=text,
+                task_type="retrieval_document"
+            )
+            
+            return result['embedding']
+            
+        except Exception as e:
+            self.logger.error(f"Error creating embedding: {e}")
+            return None
+
 class NCBICrawler:
-    """NCBI PMC FTP Crawler with parallel processing and incremental indexing"""
+    """NCBI PMC FTP Crawler with parallel processing, incremental indexing, and auto-embedding"""
     
     def __init__(self, 
                  base_url: str = "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/",
                  max_workers: int = 10,
                  timeout: int = 30,
-                 max_papers_per_run: int = 1000):  # Increased from 100 to 1000
+                 max_papers_per_run: int = 10000,
+                 gemini_api_key: str = None,
+                 auto_embed: bool = True):  
         
         self.base_url = base_url
         self.max_workers = max_workers
         self.timeout = timeout
         self.max_papers_per_run = max_papers_per_run
+        self.auto_embed = auto_embed
+        
+        # Setup embedding generator if auto_embed is enabled
+        if self.auto_embed:
+            if not gemini_api_key:
+                gemini_api_key = os.getenv('GEMINI_API_KEY')
+            
+            if gemini_api_key:
+                self.embedding_generator = EmbeddingGenerator(gemini_api_key)
+                logger.info("Auto-embedding enabled with Gemini API")
+            else:
+                logger.warning("GEMINI_API_KEY not found, disabling auto-embedding")
+                self.auto_embed = False
+                self.embedding_generator = None
+        else:
+            self.embedding_generator = None
         
         # Setup paths
         self.data_dir = Path(__file__).parent / 'data' / 'ncbi'
@@ -72,6 +144,7 @@ class NCBICrawler:
         self.processed_urls = self._load_processed_urls()
         
         logger.info(f"Initialized NCBI Crawler with {len(self.processed_urls)} previously processed papers")
+        logger.info(f"Auto-embedding: {'enabled' if self.auto_embed else 'disabled'}")
     
     def _init_database(self):
         """Initialize SQLite database for tracking processed papers"""
@@ -88,6 +161,7 @@ class NCBICrawler:
                 content_length INTEGER,
                 processed_date TEXT,
                 success BOOLEAN,
+                embedding TEXT,  -- JSON serialized embedding
                 error_message TEXT
             )
         ''')
@@ -115,10 +189,15 @@ class NCBICrawler:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # Serialize embedding if it exists
+        embedding_json = None
+        if paper.embedding:
+            embedding_json = json.dumps(paper.embedding)
+        
         cursor.execute('''
             INSERT OR REPLACE INTO processed_papers 
-            (url, file_hash, title, content, content_length, processed_date, success, error_message)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (url, file_hash, title, content, content_length, processed_date, success, embedding, error_message)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             paper.url,
             paper.file_hash,
@@ -127,6 +206,7 @@ class NCBICrawler:
             paper.content_length,
             paper.processed_date,
             paper.success,
+            embedding_json,
             paper.error_message
         ))
         
@@ -298,6 +378,26 @@ class NCBICrawler:
                     error_message="Insufficient text content"
                 )
             
+            # Generate embedding if auto_embed is enabled
+            embedding = None
+            if self.auto_embed and self.embedding_generator:
+                try:
+                    paper_data = {
+                        'title': title,
+                        'content': full_text,
+                        'source': 'NCBI_PMC'
+                    }
+                    embedding_text = self.embedding_generator.create_text_for_embedding(paper_data)
+                    embedding = self.embedding_generator.create_embedding(embedding_text)
+                    
+                    if embedding:
+                        logger.info(f"Generated embedding for: {os.path.basename(pdf_url)}")
+                    else:
+                        logger.warning(f"Failed to generate embedding for: {os.path.basename(pdf_url)}")
+                        
+                except Exception as e:
+                    logger.error(f"Error generating embedding for {pdf_url}: {e}")
+            
             logger.info(f"Successfully processed: {os.path.basename(pdf_url)} ({len(full_text)} chars)")
             
             return ProcessedPaper(
@@ -307,7 +407,8 @@ class NCBICrawler:
                 file_hash=file_hash,
                 processed_date=datetime.now().isoformat(),
                 content_length=len(full_text),
-                success=True
+                success=True,
+                embedding=embedding
             )
             
         except Exception as e:
@@ -320,6 +421,7 @@ class NCBICrawler:
                 processed_date=datetime.now().isoformat(),
                 content_length=0,
                 success=False,
+                embedding=None,
                 error_message=str(e)
             )
     
@@ -427,7 +529,7 @@ class NCBICrawler:
         cursor = conn.cursor()
         
         query = '''
-            SELECT url, title, content, content_length, processed_date, file_hash
+            SELECT url, title, content, content_length, processed_date, file_hash, embedding
             FROM processed_papers 
             WHERE success = 1 AND content_length > 100
             ORDER BY processed_date DESC
@@ -442,7 +544,15 @@ class NCBICrawler:
         
         papers = []
         for row in rows:
-            papers.append({
+            # Deserialize embedding if it exists
+            embedding = None
+            if row[6]:  # embedding column
+                try:
+                    embedding = json.loads(row[6])
+                except:
+                    embedding = None
+            
+            paper_data = {
                 'id': row[5],  # file_hash as ID
                 'source': 'NCBI_PMC',
                 'title': row[1],
@@ -451,7 +561,13 @@ class NCBICrawler:
                 'content_length': row[3],
                 'processed_date': row[4],
                 'file_type': 'application/pdf'
-            })
+            }
+            
+            # Add embedding if it exists
+            if embedding:
+                paper_data['embedding'] = embedding
+            
+            papers.append(paper_data)
         
         return papers
     
@@ -477,17 +593,30 @@ class NCBICrawler:
 
 def main():
     """Main function for testing the crawler"""
-    print("🕷️  NCBI PMC FTP Crawler")
-    print("=" * 50)
+    print("🕷️  NCBI PMC FTP Crawler with Auto-Embedding")
+    print("=" * 60)
+    
+    # Check for API key if auto-embedding is desired
+    api_key = os.getenv('GEMINI_API_KEY')
+    auto_embed = bool(api_key)
+    
+    if auto_embed:
+        print("✅ GEMINI_API_KEY found - Auto-embedding enabled")
+    else:
+        print("⚠️  GEMINI_API_KEY not found - Auto-embedding disabled")
+        print("   Set GEMINI_API_KEY environment variable to enable embedding generation")
     
     # Initialize crawler with higher limits
     crawler = NCBICrawler(
         max_workers=8,  # Increased for better performance
-        max_papers_per_run=1000  
+        max_papers_per_run=10000,
+        gemini_api_key=api_key,
+        auto_embed=auto_embed
     )
     
     try:
         # Run crawling
+        print(f"\n🚀 Starting crawl process...")
         results = crawler.crawl_and_process()
         
         print(f"\n📊 Crawling Results:")
@@ -504,10 +633,23 @@ def main():
         papers = crawler.get_processed_papers_for_rag(limit=3)
         if papers:
             print(f"\n📄 Sample processed papers:")
+            embedded_count = 0
             for i, paper in enumerate(papers, 1):
+                has_embedding = 'embedding' in paper
+                if has_embedding:
+                    embedded_count += 1
                 print(f"   {i}. {paper['title'][:60]}...")
                 print(f"      Length: {paper['content_length']} chars")
+                print(f"      Embedding: {'✅' if has_embedding else '❌'}")
                 print(f"      URL: {paper['url']}")
+            
+            total_papers = len(crawler.get_processed_papers_for_rag())
+            total_embedded = sum(1 for p in crawler.get_processed_papers_for_rag() if 'embedding' in p)
+            
+            print(f"\n🧠 Embedding Summary:")
+            print(f"   Total papers: {total_papers}")
+            print(f"   Papers with embeddings: {total_embedded}")
+            print(f"   Embedding coverage: {(total_embedded/total_papers*100):.1f}%" if total_papers > 0 else "   No papers processed")
         
     except KeyboardInterrupt:
         print("\n⚠️  Crawling interrupted by user")
