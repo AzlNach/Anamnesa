@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Camera, Loader2, AlertCircle, CheckCircle, Eye, Pill, Calendar, AlertTriangle } from 'lucide-react';
+import { Upload, Camera, Loader2, AlertCircle, CheckCircle, Eye, Pill, Calendar, AlertTriangle, Download, MapPin } from 'lucide-react';
+import { generateHealthReportPDF } from '../lib/pdfGenerator';
 
 interface ImageAnalysisProps {
   patientData?: any;
@@ -63,6 +64,7 @@ const ImageAnalysisComponent: React.FC<ImageAnalysisProps> = ({
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +161,76 @@ const ImageAnalysisComponent: React.FC<ImageAnalysisProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!analysis) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      // Transform image analysis data to match PDF generator expectations
+      const pdfData = {
+        finalDiagnosis: {
+          diagnosis: analysis.differentialDiagnosis[0]?.condition || 'Analisis Gambar Medis',
+          confidence: analysis.differentialDiagnosis[0]?.probability === 'tinggi' ? 85 : 
+                     analysis.differentialDiagnosis[0]?.probability === 'sedang' ? 65 : 45,
+          description: analysis.patientEducation.explanation,
+          reasoning: analysis.differentialDiagnosis[0]?.reasoning || 'Berdasarkan analisis gambar medis',
+          recommendations: {
+            immediate_actions: analysis.recommendations.immediate.selfCare.concat(
+              analysis.recommendations.immediate.medications
+            ),
+            doctor_type: analysis.recommendations.followUp.specialist,
+            urgency_level: analysis.segmentationAnalysis.severity,
+            tests_needed: ['Konsultasi dokter untuk konfirmasi diagnosis'],
+            general_care: analysis.recommendations.immediate.medications.concat(
+              analysis.patientEducation.lifestyle.map(item => `Gaya hidup: ${item}`)
+            ),
+            lifestyle_changes: analysis.patientEducation.lifestyle
+          }
+        },
+        sessionData: {
+          originalComplaint: `Analisis gambar medis - Area: ${analysis.anatomicalRegion}`,
+          questions: [
+            { question: 'Kualitas gambar yang dianalisis' },
+            { question: 'Area anatomi yang diperiksa' },
+            { question: 'Temuan visual abnormal' },
+            { question: 'Karakteristik lesi yang ditemukan' }
+          ],
+          answers: [
+            analysis.imageQuality,
+            analysis.anatomicalRegion,
+            analysis.visualObservations.abnormalFindings.join(', '),
+            `${analysis.visualObservations.lesionCharacteristics.size}, ${analysis.visualObservations.lesionCharacteristics.color}, ${analysis.visualObservations.lesionCharacteristics.shape}`
+          ]
+        },
+        generatedAt: new Date()
+      };
+
+      // Generate PDF using the professional health report generator
+      generateHealthReportPDF(pdfData);
+      
+      // Show success message
+      setTimeout(() => {
+        alert('Hasil analisis gambar berhasil diunduh dalam format PDF!');
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handleFindDoctor = () => {
+    if (!analysis) return;
+    
+    // Get the specialist type from analysis or use general doctor as fallback
+    const doctorType = analysis.recommendations.followUp.specialist || 'dokter umum';
+    const query = `${doctorType} terdekat`;
+    window.open(`https://www.google.com/maps/search/${encodeURIComponent(query)}`, '_blank');
   };
 
   const getSeverityColor = (severity: string) => {
@@ -544,6 +616,43 @@ const ImageAnalysisComponent: React.FC<ImageAnalysisProps> = ({
                   ))}
                 </ul>
               </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Langkah Selanjutnya</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <button
+                onClick={handleFindDoctor}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <MapPin className="w-5 h-5" />
+                Cari Dokter Terdekat
+              </button>
+              <button
+                onClick={handleGeneratePDF}
+                disabled={isGeneratingPDF}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                {isGeneratingPDF ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Membuat PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Download Hasil
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-blue-800 text-sm">
+                💡 <strong>Tips:</strong> Gunakan fitur "Cari Dokter Terdekat" untuk menemukan spesialis yang sesuai dengan rekomendasi, 
+                dan download hasil analisis untuk dibawa saat konsultasi dengan dokter.
+              </p>
             </div>
           </div>
 

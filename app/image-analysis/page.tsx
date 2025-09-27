@@ -2,15 +2,22 @@
 
 import { useState } from 'react';
 import ImageAnalysis from '../components/ImageAnalysis';
-import { Camera, ArrowLeft, Stethoscope, Focus, Archive } from 'lucide-react';
+import { Camera, ArrowLeft, Stethoscope, Focus, Archive, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ImageAnalysisPage() {
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const handleAnalysisComplete = (analysis: any) => {
     setAnalysisResult(analysis);
+    setShowSuccessMessage(true);
     console.log('Analysis completed:', analysis);
+    
+    // Hide success message after 5 seconds
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+    }, 5000);
   };
 
   return (
@@ -49,6 +56,29 @@ export default function ImageAnalysisPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="text-green-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-green-800 mb-1">
+                  ✅ Analisis Gambar Selesai!
+                </h3>
+                <p className="text-green-700">
+                  Scroll ke bawah untuk melihat hasil analisis lengkap. Jangan lupa untuk:
+                </p>
+                <ul className="text-green-700 text-sm mt-2 ml-4 space-y-1">
+                  <li>• <strong>Download hasil</strong> dalam format PDF untuk dibawa ke dokter</li>
+                  <li>• <strong>Cari dokter terdekat</strong> yang sesuai dengan rekomendasi spesialis</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navigation to Other Features */}
         <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
