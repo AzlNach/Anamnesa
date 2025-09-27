@@ -62,7 +62,7 @@ class EnhancedRAGRetriever:
         
         # Setup Gemini API
         genai.configure(api_key=gemini_api_key)
-        self.generation_model = "gemini-1.5-flash"
+        self.generation_model = "gemini-2.0-flash-lite"
         
         # Initialize search engines
         if self.use_hybrid:

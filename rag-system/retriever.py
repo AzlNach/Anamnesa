@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RAG Retrieval and Generation System
+RAG Retrieval and Generation System with Optimized Vector Search
 Melakukan pencarian similarity dan generation untuk sistem RAG Anamnesa
 Mendukung hybrid search: embedding similarity + TF-IDF untuk dokumen tanpa embedding
 """
@@ -8,8 +8,9 @@ Mendukung hybrid search: embedding similarity + TF-IDF untuk dokumen tanpa embed
 import json
 import logging
 import os
+import time
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -18,6 +19,38 @@ import google.generativeai as genai
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class OptimizedVectorSearch:
+    """Optimized vector search for faster similarity computation"""
+    
+    def __init__(self, embeddings: np.ndarray):
+        """Initialize with precomputed embeddings array"""
+        self.embeddings = embeddings.astype(np.float32) if embeddings.dtype != np.float32 else embeddings
+        self.norms = np.linalg.norm(self.embeddings, axis=1)
+        logger.info(f"Initialized optimized vector search with {len(embeddings)} embeddings")
+    
+    def search(self, query_embedding: np.ndarray, top_k: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+        """Fast cosine similarity search using optimized computation"""
+        # Normalize query embedding
+        query_embedding = query_embedding.astype(np.float32)
+        query_norm = np.linalg.norm(query_embedding)
+        
+        if query_norm == 0:
+            return np.array([]), np.array([])
+        
+        # Fast cosine similarity computation
+        # cos_sim = (A · B) / (||A|| * ||B||)
+        dot_products = np.dot(self.embeddings, query_embedding)
+        similarities = dot_products / (self.norms * query_norm)
+        
+        # Get top-k indices efficiently
+        if top_k >= len(similarities):
+            top_indices = np.argsort(similarities)[::-1]
+        else:
+            top_indices = np.argpartition(similarities, -top_k)[-top_k:]
+            top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]
+        
+        return top_indices, similarities[top_indices]
 
 class RAGRetriever:
     """Kelas untuk retrieval dan generation menggunakan RAG dengan multiple data sources dan hybrid search"""
@@ -42,6 +75,7 @@ class RAGRetriever:
             
         self.documents = []
         self.embeddings = []
+        self.vector_search = None  # Optimized vector search instance
         
         # Hybrid search components
         self.documents_with_embeddings = []  # Dokumen yang memiliki embedding
@@ -49,10 +83,21 @@ class RAGRetriever:
         self.tfidf_vectorizer = None
         self.tfidf_matrix = None
         
+        # Performance metrics
+        self.search_times = []
+        
         # Setup Gemini API
         genai.configure(api_key=gemini_api_key)
         self.embedding_model = "models/text-embedding-004"
-        self.generation_model = "gemini-1.5-flash"
+        self.generation_model = "gemini-2.0-flash-lite"
+        
+        # Load all data sources
+        self.load_all_data_sources()
+        
+        # Setup Gemini API
+        genai.configure(api_key=gemini_api_key)
+        self.embedding_model = "models/text-embedding-004"
+        self.generation_model = "gemini-2.0-flash-lite"
         
         # Load all data sources
         self.load_all_data_sources()
@@ -148,6 +193,13 @@ class RAGRetriever:
         self.documents_without_embeddings = documents_without_embeddings
         self.embeddings = np.array(embeddings) if embeddings else np.array([])
         
+        # Initialize optimized vector search
+        if len(self.embeddings) > 0:
+            self.vector_search = OptimizedVectorSearch(self.embeddings)
+            logger.info(f"Initialized optimized vector search for {len(self.embeddings)} embeddings")
+        else:
+            logger.warning("No embeddings found, vector search will be disabled")
+        
         # Setup TF-IDF for documents without embeddings
         if documents_without_embeddings:
             self.setup_tfidf_search()
@@ -221,12 +273,12 @@ class RAGRetriever:
             return []
     
     def search_similar_documents(self, query: str, top_k: int = 5) -> List[Dict]:
-        """Search for similar documents using hybrid approach: embedding similarity + TF-IDF"""
+        """Search for similar documents using optimized hybrid approach: embedding similarity + TF-IDF"""
         all_results = []
         
-        # 1. Search documents with embeddings using cosine similarity
-        if len(self.documents_with_embeddings) > 0 and len(self.embeddings) > 0:
-            embedding_results = self._search_with_embeddings(query, top_k)
+        # 1. Search documents with embeddings using optimized cosine similarity
+        if len(self.documents_with_embeddings) > 0 and self.vector_search is not None:
+            embedding_results = self._search_with_embeddings_optimized(query, top_k)
             all_results.extend(embedding_results)
         
         # 2. Search documents without embeddings using TF-IDF
@@ -243,8 +295,43 @@ class RAGRetriever:
         all_results.sort(key=lambda x: x['similarity_score'], reverse=True)
         return all_results[:top_k]
 
+    def _search_with_embeddings_optimized(self, query: str, top_k: int = 5) -> List[Dict]:
+        """Search documents with embeddings using optimized cosine similarity"""
+        if self.vector_search is None:
+            logger.warning("Vector search not initialized")
+            return []
+        
+        # Start timing
+        start_time = time.time()
+        
+        # Create query embedding
+        query_embedding = self.create_query_embedding(query)
+        if not query_embedding:
+            return []
+        
+        query_embedding = np.array(query_embedding)
+        
+        # Use optimized vector search
+        top_indices, similarities = self.vector_search.search(query_embedding, top_k)
+        
+        # Record search time
+        search_time = time.time() - start_time
+        self.search_times.append(search_time)
+        
+        results = []
+        for i, idx in enumerate(top_indices):
+            if idx < len(self.documents_with_embeddings):
+                doc = self.documents_with_embeddings[idx].copy()
+                doc['similarity_score'] = float(similarities[i])
+                doc['search_method'] = 'optimized_embedding_similarity'
+                doc['reference'] = f"{doc.get('data_source', 'unknown')}:{doc.get('title', doc.get('id', 'untitled'))}"
+                results.append(doc)
+        
+        logger.info(f"Optimized vector search completed in {search_time:.4f}s for query: '{query[:50]}...'")
+        return results
+
     def _search_with_embeddings(self, query: str, top_k: int = 5) -> List[Dict]:
-        """Search documents with embeddings using cosine similarity"""
+        """Legacy search method - kept for backward compatibility"""
         # Create query embedding
         query_embedding = self.create_query_embedding(query)
         if not query_embedding:
@@ -380,6 +467,18 @@ Berikan jawaban yang akurat berdasarkan konteks di atas. Pastikan untuk menyebut
         }
         
         return result
+    
+    def get_search_performance(self) -> Dict[str, float]:
+        """Get search performance statistics"""
+        if not self.search_times:
+            return {"avg_search_time": 0.0, "total_searches": 0}
+        
+        return {
+            "avg_search_time": np.mean(self.search_times),
+            "min_search_time": np.min(self.search_times),
+            "max_search_time": np.max(self.search_times),
+            "total_searches": len(self.search_times)
+        }
 
 def main():
     """Main function for testing RAG system"""
