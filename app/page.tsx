@@ -183,7 +183,7 @@ export default function Home() {
                   <BookOpen className="w-8 h-8 text-indigo-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">Asisten Medis RAG</h2>
+                  <h2 className="text-xl font-bold text-gray-800">Asisten Medis (SoulMed)</h2>
                   <p className="text-gray-600">Tanya jawab dengan basis pengetahuan medis</p>
                 </div>
               </div>
