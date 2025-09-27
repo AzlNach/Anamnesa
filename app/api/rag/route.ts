@@ -5,6 +5,10 @@ import path from 'path';
 
 const execAsync = promisify(exec);
 
+// Configure runtime for longer execution
+export const runtime = 'nodejs';
+export const maxDuration = 180; // 3 minutes for Vercel Pro, 30s for hobby
+
 export async function POST(request: NextRequest) {
   try {
     const { query, context = 'anamnesis', maxDocs = 5 } = await request.json();
@@ -29,8 +33,9 @@ export async function POST(request: NextRequest) {
     // Execute Python script with UTF-8 encoding
     const { stdout, stderr } = await execAsync(pythonCommand, {
       cwd: process.cwd(),
-      timeout: 30000, // 30 seconds timeout
+      timeout: 90000, // 1.5 minutes timeout for original retriever
       encoding: 'utf8',
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer for large outputs
       env: { 
         ...process.env, 
         PYTHONIOENCODING: 'utf-8',

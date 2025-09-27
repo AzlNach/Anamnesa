@@ -34,8 +34,8 @@ export interface RAGConfig {
 
 const DEFAULT_CONFIG: RAGConfig = {
   apiEndpoint: '/api/rag',
-  timeout: 30000, // 30 seconds
-  retries: 3
+  timeout: 120000, // 2 minutes to match backend timeout + buffer
+  retries: 2 // Reduce retries since each attempt takes long
 };
 
 /**
@@ -80,9 +80,17 @@ export class RAGClient {
       } catch (error) {
         lastError = error as Error;
         
+        // Log error untuk debugging
+        console.error(`RAG Query attempt ${attempt} failed:`, error);
+        
+        // Check if it's an abort error (timeout)
+        if (error instanceof Error && error.name === 'AbortError') {
+          lastError = new Error('Request timeout - sistem sedang memproses data dalam jumlah besar. Silakan coba lagi.');
+        }
+        
         if (attempt < this.config.retries) {
-          // Exponential backoff
-          const delay = Math.pow(2, attempt) * 1000;
+          // Exponential backoff with jitter
+          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

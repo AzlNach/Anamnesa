@@ -27,6 +27,7 @@ export default function RAGAssistant({
   const [response, setResponse] = useState('');
   const [sources, setSources] = useState<RAGSource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Menganalisis informasi medis...');
   const [error, setError] = useState('');
   const [ragClient] = useState(() => new RAGClient());
 
@@ -56,13 +57,21 @@ export default function RAGAssistant({
     setError('');
     setResponse('');
     setSources([]);
+    setLoadingMessage('Menganalisis informasi medis...');
 
     try {
+      // Update loading message after some time
+      const messageTimer = setTimeout(() => {
+        setLoadingMessage('Memproses data medis dalam jumlah besar, mohon tunggu...');
+      }, 10000);
+
       const result = await ragClient.query({
         query: currentQuery,
         context,
         maxDocs: 5
       });
+
+      clearTimeout(messageTimer);
 
       if (result.success) {
         setResponse(result.response);
@@ -76,10 +85,12 @@ export default function RAGAssistant({
         setError(result.error || 'Terjadi kesalahan saat memproses permintaan');
       }
     } catch (err) {
-      setError('Terjadi kesalahan koneksi. Silakan coba lagi.');
+      const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan koneksi. Silakan coba lagi.';
+      setError(errorMessage);
       console.error('RAG query error:', err);
     } finally {
       setIsLoading(false);
+      setLoadingMessage('Menganalisis informasi medis...');
     }
   };
 
@@ -156,9 +167,15 @@ export default function RAGAssistant({
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-3 text-gray-600">
+            <div className="flex flex-col items-center gap-3 text-gray-600">
               <Loader className="w-5 h-5 animate-spin" />
-              <span>Menganalisis informasi medis...</span>
+              <span className="text-center">{loadingMessage}</span>
+              <div className="text-xs text-gray-500 max-w-md text-center">
+                {loadingMessage.includes('besar') ? 
+                  'Sistem sedang memproses 37,000+ dokumen medis. Proses ini membutuhkan waktu hingga 2 menit.' : 
+                  'Mencari informasi terkait dari basis data medis...'
+                }
+              </div>
             </div>
           </div>
         )}
