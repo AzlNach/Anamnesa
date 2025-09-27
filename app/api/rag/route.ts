@@ -9,7 +9,84 @@ const execAsync = promisify(exec);
 export const runtime = 'nodejs';
 export const maxDuration = 180; // 3 minutes for Vercel Pro, 30s for hobby
 
+// Try persistent server first, fallback to script
+async function tryPersistentServer(query: string, maxDocs: number, context: string) {
+  const persistentUrl = 'http://localhost:8001/query';
+  
+  try {
+    const response = await fetch(persistentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        max_docs: maxDocs,
+        context: context
+      }),
+      // Short timeout for persistent server
+      signal: AbortSignal.timeout(15000) // 15 seconds
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Used persistent RAG server');
+      return {
+        success: true,
+        data: data,
+        source: 'persistent_server'
+      };
+    }
+  } catch (error) {
+    console.log('⚠️ Persistent server not available, falling back to script');
+  }
+  
+  return null;
+}
+
+async function fallbackToScript(query: string, maxDocs: number, context: string) {
+  const pythonScript = path.join(process.cwd(), 'rag-system', 'api_retriever.py');
+  
+  const pythonCommand = process.platform === 'win32' 
+    ? `chcp 65001 >nul && python "${pythonScript}" "${query}" ${maxDocs} "${context}"`
+    : `python "${pythonScript}" "${query}" ${maxDocs} "${context}"`;
+
+  console.log('🐍 Using fallback Python script');
+
+  // Execute Python script with UTF-8 encoding
+  const { stdout, stderr } = await execAsync(pythonCommand, {
+    cwd: process.cwd(),
+    timeout: 60000, // 1 minute timeout for script
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 10, // 10MB buffer for large outputs
+    env: { 
+      ...process.env, 
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1'
+    }
+  });
+
+  if (stderr) {
+    console.log('Python stderr:', stderr);
+  }
+
+  // Parse the JSON response
+  const result = JSON.parse(stdout);
+
+  if (result.error) {
+    throw new Error(`Python script error: ${result.error}`);
+  }
+
+  return {
+    success: true,
+    data: result,
+    source: 'python_script'
+  };
+}
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const { query, context = 'anamnesis', maxDocs = 5 } = await request.json();
 
@@ -20,80 +97,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Path to the Python RAG script
-    const pythonScript = path.join(process.cwd(), 'rag-system', 'api_retriever.py');
+    console.log(`🔍 RAG Query: "${query}" (maxDocs: ${maxDocs}, context: ${context})`);
+
+    // Try persistent server first
+    let result = await tryPersistentServer(query, maxDocs, context);
     
-    // Use chcp 65001 to set UTF-8 encoding on Windows
-    const pythonCommand = process.platform === 'win32' 
-      ? `chcp 65001 >nul && python "${pythonScript}" "${query}" ${maxDocs} "${context}"`
-      : `python "${pythonScript}" "${query}" ${maxDocs} "${context}"`;
-
-    console.log('Executing command:', pythonCommand);
-
-    // Execute Python script with UTF-8 encoding
-    const { stdout, stderr } = await execAsync(pythonCommand, {
-      cwd: process.cwd(),
-      timeout: 90000, // 1.5 minutes timeout for original retriever
-      encoding: 'utf8',
-      maxBuffer: 1024 * 1024 * 10, // 10MB buffer for large outputs
-      env: { 
-        ...process.env, 
-        PYTHONIOENCODING: 'utf-8',
-        PYTHONUTF8: '1'
-      }
-    });
-
-    console.log('Python stdout:', stdout);
-    if (stderr) {
-      console.log('Python stderr:', stderr);
+    // Fallback to Python script if persistent server is not available
+    if (!result) {
+      result = await fallbackToScript(query, maxDocs, context);
     }
 
-    // Parse the JSON response from Python script
-    let result;
-    try {
-      result = JSON.parse(stdout);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw stdout:', stdout);
-      return NextResponse.json(
-        { error: 'Invalid response format from Python script' },
-        { status: 500 }
-      );
-    }
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ RAG processing completed in ${processingTime}ms using ${result.source}`);
 
-    // Check if there's an error in the result
-    if (result.error) {
-      console.error('Python script error:', result.error);
-      return NextResponse.json(
-        { 
-          error: 'Python processing error',
-          details: result.error,
-          query: result.query 
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
+    // Add processing metadata
+    const responseData = {
       success: true,
-      query: result.query,
-      response: result.response,
-      sources: result.retrieved_documents,
-      metadata: result.metadata
-    });
+      query: result.data.query,
+      response: result.data.response,
+      sources: result.data.retrieved_documents,
+      metadata: {
+        ...result.data.metadata,
+        processing_time_ms: processingTime,
+        processing_source: result.source
+      }
+    };
+
+    return NextResponse.json(responseData);
 
   } catch (error: any) {
-    console.error('RAG API error:', error);
-    
-    // More detailed error information
-    const errorMessage = error.message || 'Unknown error';
-    const errorCode = error.code || 'UNKNOWN';
+    const processingTime = Date.now() - startTime;
+    console.error('❌ RAG API error:', error);
     
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        message: errorMessage,
-        code: errorCode
+        message: error.message || 'Unknown error',
+        code: error.code || 'UNKNOWN',
+        processing_time_ms: processingTime
       },
       { status: 500 }
     );
