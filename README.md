@@ -18,10 +18,12 @@ Anamnesa AI adalah aplikasi web berbasis Next.js dengan sistem **Enhanced RAG (R
 ### Core Medical AI Features
 - **🤖 AI-Powered Symptom Analysis**: Analisis gejala menggunakan Google Gemini AI untuk ekstraksi dan interpretasi keluhan medis secara akurat.
 - **💬 Interactive Anamnesis**: Proses tanya jawab interaktif berbasis AI dengan minimal 5-10 pertanyaan dinamis berdasarkan kompleksitas kasus.
-- **📸 Medical Image Analysis**: Analisis gambar medis dengan AI segmentasi menggunakan Chain of Thought prompting untuk diagnosis visual yang komprehensif.
+- **📸 Enhanced Medical Image Analysis**: Analisis gambar medis dengan AI segmentasi menggunakan Chain of Thought prompting untuk diagnosis visual yang komprehensif, dilengkapi dengan fitur download hasil dan pencarian dokter terdekat.
 - **🧠 Chain of Thought Medical Analysis**: Pendekatan analisis step-by-step (6 tahap) untuk memberikan reasoning yang jelas dan diagnosis yang lebih akurat.
 - **🎯 Intelligent Medical Diagnosis**: Sintesis komprehensif informasi untuk memberikan diagnosis yang paling mungkin dengan tingkat keyakinan.
-- **📄 Professional PDF Export**: Ekspor hasil konsultasi dalam format PDF A4 dengan design medis profesional.
+- **📄 Professional PDF Export**: Ekspor hasil konsultasi dan analisis gambar dalam format PDF A4 dengan design medis profesional.
+- **🏥 Find Nearby Doctors**: Integrasi pencarian dokter terdekat berdasarkan hasil diagnosis menggunakan Google Maps API.
+- **📱 Action-Ready Results**: Setiap hasil diagnosis dilengkapi dengan opsi download dan pencarian dokter untuk kemudahan follow-up.
 
 ### Advanced Enhanced RAG System Features
 - **🚀 Hybrid Search Engine**: Sistem pencarian hybrid yang menggabungkan FAISS Vector Database dan BM25 Keyword Search dengan parallel processing untuk performa optimal.
@@ -58,19 +60,19 @@ anamnesa/
 │   │   ├── analyze/          # Analisis awal gejala
 │   │   ├── anamnesis/        # Pertanyaan lanjutan  
 │   │   ├── final-diagnosis/  # Diagnosis final
-│   │   ├── image-analysis/   # Analisis gambar medis
+│   │   ├── image-analysis/   # Analisis gambar medis dengan AI
 │   │   └── rag/             # RAG API endpoint (NEW!)
 │   ├── components/
 │   │   ├── DeveloperFooter.tsx
 │   │   ├── FloatingActionButton.tsx
-│   │   ├── ImageAnalysis.tsx # Komponen analisis gambar
+│   │   ├── ImageAnalysis.tsx # Komponen analisis gambar dengan download & find doctors
 │   │   ├── RAGAssistant.tsx  # RAG assistant component (NEW!)
 │   │   └── NoDataError.tsx
 │   ├── consultation/         # Halaman proses anamnesis
-│   ├── image-analysis/       # Halaman analisis gambar
-│   ├── results/             # Halaman hasil diagnosis
+│   ├── image-analysis/       # Halaman analisis gambar dengan action buttons
+│   ├── results/             # Halaman hasil diagnosis dengan download & find doctors
 │   ├── lib/                 # Utility functions
-│   │   ├── pdfGenerator.ts  # PDF generation
+│   │   ├── pdfGenerator.ts  # PDF generation untuk konsultasi dan image analysis
 │   │   ├── utils.ts         # General utilities
 │   │   └── ragUtils.ts      # RAG utilities (NEW!)
 │   ├── globals.css          # Global styles
@@ -253,12 +255,14 @@ python api_retriever.py "diabetes melitus gejala" 5 anamnesis true
 
 ## 📖 Usage Guide
 
-### Basic Medical Consultation
+### Basic Medical Consultation with Complete Workflow
 1. **Buka aplikasi** di browser
 2. **Masukkan keluhan** pada form utama
-3. **Ikuti proses anamnesis** interaktif
-4. **Review hasil diagnosis** dengan referensi
-5. **Export PDF** hasil konsultasi
+3. **Ikuti proses anamnesis** interaktif dengan AI
+4. **Review hasil diagnosis** dengan referensi medis
+5. **Download PDF** hasil konsultasi profesional
+6. **Cari dokter terdekat** untuk konsultasi lanjutan
+7. **Follow-up** dengan tenaga medis yang qualified
 
 ### Enhanced RAG Queries with Hybrid Search
 1. **Gunakan RAG Assistant** di homepage
@@ -268,12 +272,14 @@ python api_retriever.py "diabetes melitus gejala" 5 anamnesis true
 5. **Review source references** dengan similarity scores
 6. **Similarity scores** menunjukkan relevansi sumber dari both vector dan keyword search
 
-### Medical Image Analysis
-1. **Upload gambar medis** (X-ray, CT scan, dll)
-2. **Tambahkan deskripsi** (opsional)
-3. **Proses analisis AI** dengan Chain of Thought
-4. **Review hasil** diagnosis visual
-5. **Export hasil** dalam PDF
+### Medical Image Analysis with Enhanced Features
+1. **Upload gambar medis** (X-ray, CT scan, MRI, dll)
+2. **Tambahkan deskripsi** atau keluhan terkait (opsional)
+3. **Proses analisis AI** dengan Chain of Thought reasoning
+4. **Review hasil** diagnosis visual komprehensif
+5. **Download PDF** hasil analisis dengan format profesional
+6. **Cari dokter terdekat** berdasarkan rekomendasi diagnosis
+7. **Aksi lanjutan** untuk konsultasi medis yang tepat
 
 ---
 
@@ -515,7 +521,15 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🔄 Version History
 
-### v2.0.0 - RAG System Integration (Current)
+### v2.1.0 - Enhanced User Experience (Current)
+- ✅ Enhanced medical image analysis dengan download & find doctors
+- ✅ PDF export untuk hasil analisis gambar
+- ✅ Google Maps integration untuk pencarian dokter terdekat
+- ✅ Unified action buttons untuk semua fitur diagnosis
+- ✅ Improved user workflow dengan success notifications
+- ✅ Professional medical report generation untuk image analysis
+
+### v2.0.0 - RAG System Integration
 - ✅ RAG system dengan Google Drive dan NCBI integration
 - ✅ Comprehensive testing suite
 - ✅ Multi-format document support
@@ -532,7 +546,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📊 Performance Benchmarks
 
-### Latest Test Results (v2.0.0)
+### Latest Test Results (v2.1.0)
 ```
 🎯 Overall System Status: 100% Success Rate
 
@@ -555,8 +569,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
    - API Endpoint: ✅
    - UI Components: ✅
    - Real-time Processing: ✅
+
+📸 Enhanced Image Analysis: ✅ (NEW!)
+   - AI Image Processing: ✅
+   - PDF Export Generation: ✅
+   - Doctor Search Integration: ✅
+   - Action Buttons Functionality: ✅
 ```
 
 ---
 
-**Made with ❤️ by AzlNach | Powered by Google Gemini AI & RAG Technology**
+**Made with ❤️ by AzlNach | Enhanced Medical AI with RAG Technology & Complete Healthcare Workflow**
